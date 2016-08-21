@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CreateConstructorRefactoring", "CreateConstructorRefactoring\CreateConstructorRefactoring\CreateConstructorRefactoring.csproj", "{FE695822-222A-4220-8CCB-9FF6525EE449}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CreateConstructorRefactoring.Vsix", "CreateConstructorRefactoring\CreateConstructorRefactoring.Vsix\CreateConstructorRefactoring.Vsix.csproj", "{6D6E8705-ABE4-45CD-BFFA-03A0D3CAF7E2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntroduceFieldRefactoring", "IntroduceFieldRefactoring\IntroduceFieldRefactoring\IntroduceFieldRefactoring.csproj", "{18445C9C-B08C-4A2E-B110-0BAF1F1E5B48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntroduceFieldRefactoring.Vsix", "IntroduceFieldRefactoring\IntroduceFieldRefactoring.Vsix\IntroduceFieldRefactoring.Vsix.csproj", "{B59ECF5B-8DBD-4300-9197-B922DEEE06E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjectionToolset", "DependencyInjectionToolset\DependencyInjectionToolset.csproj", "{CD8C9885-52E0-4CC3-ABFD-F99D9C0F17E5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FE695822-222A-4220-8CCB-9FF6525EE449}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE695822-222A-4220-8CCB-9FF6525EE449}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE695822-222A-4220-8CCB-9FF6525EE449}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE695822-222A-4220-8CCB-9FF6525EE449}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D6E8705-ABE4-45CD-BFFA-03A0D3CAF7E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D6E8705-ABE4-45CD-BFFA-03A0D3CAF7E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D6E8705-ABE4-45CD-BFFA-03A0D3CAF7E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D6E8705-ABE4-45CD-BFFA-03A0D3CAF7E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18445C9C-B08C-4A2E-B110-0BAF1F1E5B48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18445C9C-B08C-4A2E-B110-0BAF1F1E5B48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18445C9C-B08C-4A2E-B110-0BAF1F1E5B48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18445C9C-B08C-4A2E-B110-0BAF1F1E5B48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B59ECF5B-8DBD-4300-9197-B922DEEE06E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B59ECF5B-8DBD-4300-9197-B922DEEE06E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B59ECF5B-8DBD-4300-9197-B922DEEE06E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B59ECF5B-8DBD-4300-9197-B922DEEE06E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CD8C9885-52E0-4CC3-ABFD-F99D9C0F17E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD8C9885-52E0-4CC3-ABFD-F99D9C0F17E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD8C9885-52E0-4CC3-ABFD-F99D9C0F17E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD8C9885-52E0-4CC3-ABFD-F99D9C0F17E5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

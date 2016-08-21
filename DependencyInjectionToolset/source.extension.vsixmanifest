@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" ?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="DependencyInjectionToolset.Akos Nagy.1ad465e3-e1b2-46ae-82ff-e2d2163fba74" Version="1.0" Language="en-US" Publisher="Akos Nagy" />
+    <DisplayName>DependencyInjectionToolset</DisplayName>
+    <Description xml:space="preserve">Some handy extensions for Visual Studio to help you with tasks that you might encounter when building software applying the philosophy of dependency injection.</Description>
+    <MoreInfo>https://github.com/conwid/DependencyInjectionToolset</MoreInfo>
+    <License>LICENSE.txt</License>
+    <Icon>icon.png</Icon>
+    <Tags>Dependency Injection</Tags>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Version="[14.0,15.0)" Id="Microsoft.VisualStudio.Pro" />
+    <InstallationTarget Version="[14.0,15.0)" Id="Microsoft.VisualStudio.Community" />
+    <InstallationTarget Version="[14.0,15.0)" Id="Microsoft.VisualStudio.Enterprise" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+  </Dependencies>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="CreateConstructorRefactoring" Path="|CreateConstructorRefactoring|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="IntroduceFieldRefactoring" Path="|IntroduceFieldRefactoring|" />
+  </Assets>
+</PackageManifest>
