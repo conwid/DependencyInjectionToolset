@@ -16,21 +16,28 @@ namespace CreateConstructorRefactoring
     [ExportCodeRefactoringProvider( LanguageNames.CSharp, Name = nameof( CreateConstructorRefactoringCodeRefactoringProvider ) ), Shared]
     internal class CreateConstructorRefactoringCodeRefactoringProvider : CodeRefactoringProvider
     {
+        private DIPropertyVisitor propertyVisitor = new DIPropertyVisitor();
+
         private bool CandidateField( FieldDeclarationSyntax fieldDecl )
         {
             return !(fieldDecl == null || fieldDecl.Modifiers.ToString().Contains( SyntaxFactory.Token( SyntaxKind.PublicKeyword ).ToString() ) ||
                 fieldDecl.Modifiers.ToString().Contains( SyntaxFactory.Token( SyntaxKind.StaticKeyword ).ToString() ) || !fieldDecl.Modifiers.ToString().Contains( SyntaxFactory.Token( SyntaxKind.ReadOnlyKeyword ).ToString() ));
         }
 
-        private bool IsInjectableType( FieldDeclarationSyntax fieldDecl, SemanticModel model )
+        private bool CandidateProperty( PropertyDeclarationSyntax propertyDecl )
         {
-            var symbolInfo = model.GetSymbolInfo( fieldDecl.Declaration.Type );
+            return propertyDecl != null && propertyVisitor.IsCandidate( propertyDecl );
+        }
+
+        private bool IsInjectableType( TypeSyntax type, SemanticModel model )
+        {
+            var symbolInfo = model.GetSymbolInfo( type );
             if( symbolInfo.Symbol == null )
             {
                 return false;
             }
             var typeSymbol = (INamedTypeSymbol)symbolInfo.Symbol;
-            return (typeSymbol.IsAbstract && typeSymbol.TypeKind == TypeKind.Class) || typeSymbol.TypeKind == TypeKind.Interface;
+            return ( typeSymbol.IsAbstract && typeSymbol.TypeKind == TypeKind.Class ) || typeSymbol.TypeKind == TypeKind.Interface;
         }
 
         private IMethodSymbol GetBaseCtor( ClassDeclarationSyntax classDecl, SemanticModel model )
@@ -58,23 +65,35 @@ namespace CreateConstructorRefactoring
             var node = root.FindNode( context.Span );
             var model = await context.Document.GetSemanticModelAsync();
             var fieldDecl = node as FieldDeclarationSyntax;
-            if( !CandidateField( fieldDecl ) || !IsInjectableType( fieldDecl, model ) )
+            var propertyDecl = node as PropertyDeclarationSyntax;
+            if ( !((CandidateField( fieldDecl ) && IsInjectableType( fieldDecl.Declaration.Type, model )) || (CandidateProperty(propertyDecl) && IsInjectableType(propertyDecl.Type, model)) ))
             {
                 return;
             }
 
+            ClassDeclarationSyntax parent = null;
+            if( fieldDecl != null )
+            {
+                parent = fieldDecl.Parent as ClassDeclarationSyntax;
+            }
+            else if( propertyDecl != null )
+            {
+                parent = propertyDecl.Parent as ClassDeclarationSyntax;
+            }
+            
             // For any type declaration node, create a code action to reverse the identifier text.
-            var action = CodeAction.Create( "Create constructor for dependency injection", c => CreateCtor( context, context.Document, model, fieldDecl, c ) );
+            var action = CodeAction.Create( "Create constructor for dependency injection", c => CreateCtor( context, context.Document, model, parent, c ) );
 
             // Register this code action.
             context.RegisterRefactoring( action );
         }
 
-        private async Task<Document> CreateCtor( CodeRefactoringContext context, Document document, SemanticModel model, FieldDeclarationSyntax fieldDecl, CancellationToken cancellationToken )
+        private async Task<Document> CreateCtor( CodeRefactoringContext context, Document document, SemanticModel model, ClassDeclarationSyntax originalType, CancellationToken cancellationToken )
         {
-            var originalType = fieldDecl.Parent as ClassDeclarationSyntax;
             var fields = originalType.DescendantNodes().OfType<FieldDeclarationSyntax>();
-            var candidateFields = fields.Where( f => CandidateField( f ) && IsInjectableType( f, model ) );
+            var candidateFields = fields.Where( f => CandidateField( f ) && IsInjectableType( f.Declaration.Type, model ) );
+            var properties = originalType.DescendantNodes().OfType<PropertyDeclarationSyntax>();
+            var candidateProperties = properties.Where( p => CandidateProperty( p ) && IsInjectableType( p.Type, model ) );
             var parameterTokens = new List<SyntaxNodeOrToken>();
             var statements = new List<StatementSyntax>();
             foreach( var field in candidateFields )
@@ -87,6 +106,18 @@ namespace CreateConstructorRefactoring
                                                 SyntaxFactory.MemberAccessExpression( SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.ThisExpression(), SyntaxFactory.IdentifierName( field.Declaration.Variables[0].Identifier ) ),
                                                 SyntaxFactory.IdentifierName( field.Declaration.Variables[0].Identifier )
                     ) ) );
+            }
+
+            foreach ( var property in candidateProperties )
+            {
+                parameterTokens.Add( SyntaxFactory.Parameter( new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), property.Type, property.Identifier, null ) );
+                parameterTokens.Add( SyntaxFactory.Token( SyntaxKind.CommaToken ) );
+                statements.Add( SyntaxFactory.ExpressionStatement(
+                                        SyntaxFactory.AssignmentExpression(
+                                                SyntaxKind.SimpleAssignmentExpression,
+                                                SyntaxFactory.MemberAccessExpression( SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.ThisExpression(), SyntaxFactory.IdentifierName( property.Identifier ) ),
+                                                SyntaxFactory.IdentifierName( property.Identifier )
+                    )));
             }
 
             var ctor = SyntaxFactory.ConstructorDeclaration( SyntaxFactory.Identifier( originalType.Identifier.ToString() ) )
