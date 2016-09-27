@@ -8,28 +8,18 @@ using System.Threading.Tasks;
 
 namespace CreateConstructorRefactoring
 {
-    internal class DIPropertyVisitor
+    internal class DIPropertyWalker
     {
-        private class PropertyVisitor : CSharpSyntaxVisitor
+        private class PropertyWalker : CSharpSyntaxWalker
         {
             private bool isValid;
 
             public override void VisitPropertyDeclaration( PropertyDeclarationSyntax node )
             {
-                //TODO: Why do I need to do this? 
-                VisitAccessorList( node.AccessorList );
+                base.VisitPropertyDeclaration(node);
                 if( node.Initializer != null || node.Modifiers.Any( m => m.Kind() == SyntaxKind.PublicKeyword || m.Kind() == SyntaxKind.StaticKeyword ) )
                 {
                     isValid = false;
-                }
-            }
-
-            public override void VisitAccessorList( AccessorListSyntax node )
-            {
-                //TODO: Why do I need to do this? 
-                foreach( var accessorDeclarationSyntax in node.Accessors )
-                {
-                    VisitAccessorDeclaration(accessorDeclarationSyntax);
                 }
             }
 
@@ -51,7 +41,7 @@ namespace CreateConstructorRefactoring
 
         public bool IsCandidate( PropertyDeclarationSyntax property )
         {
-            var propertyVisitor = new PropertyVisitor();
+            var propertyVisitor = new PropertyWalker();
             return propertyVisitor.IsCandidate( property );
         }
     }

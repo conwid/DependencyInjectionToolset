@@ -16,7 +16,7 @@ namespace CreateConstructorRefactoring
     [ExportCodeRefactoringProvider( LanguageNames.CSharp, Name = nameof( CreateConstructorRefactoringCodeRefactoringProvider ) ), Shared]
     internal class CreateConstructorRefactoringCodeRefactoringProvider : CodeRefactoringProvider
     {
-        private DIPropertyVisitor propertyVisitor = new DIPropertyVisitor();
+        private DIPropertyWalker propertyWalker = new DIPropertyWalker();
 
         private bool CandidateField( FieldDeclarationSyntax fieldDecl )
         {
@@ -26,7 +26,7 @@ namespace CreateConstructorRefactoring
 
         private bool CandidateProperty( PropertyDeclarationSyntax propertyDecl )
         {
-            return propertyDecl != null && propertyVisitor.IsCandidate( propertyDecl );
+            return propertyDecl != null && propertyWalker.IsCandidate( propertyDecl );
         }
 
         private bool IsInjectableType( TypeSyntax type, SemanticModel model )

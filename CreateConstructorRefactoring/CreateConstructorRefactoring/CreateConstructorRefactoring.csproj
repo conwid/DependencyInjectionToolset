@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CodeRefactoringProvider.cs" />
-    <Compile Include="DIPropertyVisitor.cs" />
+    <Compile Include="DIProperty.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
