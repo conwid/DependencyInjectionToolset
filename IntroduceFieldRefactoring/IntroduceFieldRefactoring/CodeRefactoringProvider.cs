@@ -21,36 +21,49 @@ namespace IntroduceFieldRefactoring
         {
             var root = await context.Document.GetSyntaxRootAsync( context.CancellationToken ).ConfigureAwait( false );
             var node = root.FindNode( context.Span );
-            var parameterList = node as ParameterListSyntax;
-            if( parameterList == null )
+
+            ParameterSyntax parameter;
+            if(node is ParameterListSyntax)
+            {
+                var parameterList = (ParameterListSyntax)node;
+
+                parameter = parameterList.Parameters.SingleOrDefault(p => p.Span.Contains(context.Span));
+                if(parameter == null)
+                {
+                    return;
+                }
+            }
+            else if(node is ParameterSyntax)
+            {
+                parameter = (ParameterSyntax)node;
+            }
+            else if(node is IdentifierNameSyntax)
+            {
+                var indentifier = (IdentifierNameSyntax)node;
+                parameter = (ParameterSyntax)indentifier.Parent;
+            }
+            else
             {
                 return;
             }
 
-            var parameter = parameterList.Parameters.SingleOrDefault( p => p.Span.Contains( context.Span ) );
-            if( parameter == null )
+            var parameterName = GetParameterName(parameter);
+            if(string.IsNullOrEmpty(parameterName) || !(parameter.Parent.Parent is ConstructorDeclarationSyntax))
             {
                 return;
             }
-            var parameterName = GetParameterName( parameter );
-            if( string.IsNullOrEmpty( parameterName ) )
-            {
-                return;
-            }
-            var uppercase = parameterName.Substring( 0, 1 ).ToUpper() + parameterName.Substring( 1 );
 
-            if( !VariableExists( root, "_" + parameterName ) )
+            if(!VariableExists(root, "_" + parameterName))
             {
-                var action = CodeAction.Create( "Introduce and initialize field '_" + parameterName + "'", ct => CreateFieldAsync( context, parameter, parameterName, ct, true ) );
-                context.RegisterRefactoring( action );
+                var action = CodeAction.Create("Introduce and initialize field '_" + parameterName + "'", ct => CreateFieldAsync(context, parameter, parameterName, ct, true));
+                context.RegisterRefactoring(action);
             }
 
-            if( !VariableExists( root, parameterName ) )
+            if(!VariableExists(root, parameterName))
             {
-                var action2 = CodeAction.Create( "Introduce and initialize field 'this." + parameterName + "'", ct => CreateFieldAsync( context, parameter, parameterName, ct ) );
-                context.RegisterRefactoring( action2 );
+                var action2 = CodeAction.Create("Introduce and initialize field 'this." + parameterName + "'", ct => CreateFieldAsync(context, parameter, parameterName, ct));
+                context.RegisterRefactoring(action2);
             }
-
         }
 
         private async Task<Document> CreateFieldAsync( CodeRefactoringContext context, ParameterSyntax parameter,
