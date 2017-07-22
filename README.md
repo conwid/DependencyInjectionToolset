@@ -8,7 +8,7 @@ up creating a lot of constructors with a lot of parameters. While this is not a 
 overview about the dependencies of a component - you do have to code a lot.
 
 This tool helps you with that. Features currently include:
-* Get the cursor on a private readonly field of an interface or abstract class type. Hit Ctrl+. (or whatever is your
+* Get the cursor on a private readonly field of an interface or abstract class type (i.e. a field whose type is an interface type or an abstract class type). Hit Ctrl+. (or whatever is your
 shortcut for the refactoring suggestions) and choose "Generate dependency injection constructor". This will give you a 
 constructor which has a parameter for every private readonly field of an interface or abstract class type and the fields
 are initialized from the parameters.
