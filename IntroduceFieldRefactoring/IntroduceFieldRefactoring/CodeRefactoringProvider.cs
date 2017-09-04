@@ -22,10 +22,10 @@ namespace IntroduceFieldRefactoring
             var root = await context.Document.GetSyntaxRootAsync( context.CancellationToken ).ConfigureAwait( false );
             var node = root.FindNode( context.Span );
 
-            ParameterSyntax parameter;
-            if(node is ParameterListSyntax)
+            ParameterSyntax parameter = null;
+            if(node is ParameterListSyntax pls)
             {
-                var parameterList = (ParameterListSyntax)node;
+                var parameterList = pls;
 
                 parameter = parameterList.Parameters.SingleOrDefault(p => p.Span.Contains(context.Span));
                 if(parameter == null)
@@ -33,16 +33,17 @@ namespace IntroduceFieldRefactoring
                     return;
                 }
             }
-            else if(node is ParameterSyntax)
+            else if(node is ParameterSyntax ps)
             {
-                parameter = (ParameterSyntax)node;
+                parameter = ps;
             }
-            else if(node is IdentifierNameSyntax)
+            else if(node is IdentifierNameSyntax ins)
             {
-                var indentifier = (IdentifierNameSyntax)node;
-                parameter = (ParameterSyntax)indentifier.Parent;
+                var identifier = ins;
+                parameter = identifier.Parent as ParameterSyntax;
             }
-            else
+
+            if (parameter == null)
             {
                 return;
             }
