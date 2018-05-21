@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
+using System;
 using System.Composition;
 using System.Linq;
 using System.Threading;
@@ -66,38 +67,57 @@ namespace IntroduceFieldRefactoring
 
         private async Task<Document> CreateFieldAsync(CodeRefactoringContext context, ParameterSyntax parameter,
             string paramName, CancellationToken cancellationToken, bool useUnderscore = false)
+        {           
+                var guard = CreateGuard(context, paramName);
+                ExpressionSyntax assignment = CreateAssignment(context, paramName, useUnderscore);
+                var oldConstructor = parameter.Ancestors().OfType<ConstructorDeclarationSyntax>().First();
+                var newConstructor = oldConstructor.WithBody(oldConstructor.Body.AddStatements(
+                     guard, SyntaxFactory.ExpressionStatement(assignment)));
+
+                var oldClass = parameter.FirstAncestorOrSelf<ClassDeclarationSyntax>();
+                var oldClassWithNewCtor = oldClass.ReplaceNode(oldConstructor, newConstructor);
+
+                var fieldDeclaration = CreateFieldDeclaration(GetParameterType(parameter), paramName, useUnderscore);
+                var newClass = oldClassWithNewCtor
+                    .WithMembers(oldClassWithNewCtor.Members.Insert(0, fieldDeclaration))
+                    .WithAdditionalAnnotations(Formatter.Annotation);
+
+                var oldRoot = await context.Document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+                var newRoot = oldRoot.ReplaceNode(oldClass, newClass);
+
+                return context.Document.WithSyntaxRoot(newRoot);           
+        }
+
+        private StatementSyntax CreateGuard(CodeRefactoringContext context, string paramName)
         {
-            ExpressionSyntax assignment = null;
-            if (useUnderscore)
-            {
-                assignment = SyntaxFactory.AssignmentExpression(
-                         SyntaxKind.SimpleAssignmentExpression,
-                         SyntaxFactory.IdentifierName("_" + paramName),
-                         SyntaxFactory.IdentifierName(paramName));
-            }
-            else
-            {
-                assignment = SyntaxFactory.AssignmentExpression(
-                         SyntaxKind.SimpleAssignmentExpression,
-                         SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.ThisExpression(), SyntaxFactory.IdentifierName(paramName)),
-                         SyntaxFactory.IdentifierName(paramName));
-            }
-            var oldConstructor = parameter.Ancestors().OfType<ConstructorDeclarationSyntax>().First();
-            var newConstructor = oldConstructor.WithBody(oldConstructor.Body.AddStatements(
-                 SyntaxFactory.ExpressionStatement(assignment)));
+            return
+            SyntaxFactory.IfStatement(
+                                        SyntaxFactory.BinaryExpression(
+                                            SyntaxKind.EqualsExpression,
+                                            SyntaxFactory.IdentifierName(paramName),
+                                            SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression)
+                                         ),
+                                        SyntaxFactory.ThrowStatement(
+                                            SyntaxFactory.ObjectCreationExpression(
+                                                SyntaxFactory.IdentifierName(nameof(ArgumentNullException)),
+                                                                             SyntaxFactory.ArgumentList().AddArguments(
+                                                                                 SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(SyntaxFactory.IdentifierName(paramName).Identifier.ToString())))
+                                                                             ),
+                                                                             null
+                                                                                  )
+                                                                      )
+                                                             );
+        }
 
-            var oldClass = parameter.FirstAncestorOrSelf<ClassDeclarationSyntax>();
-            var oldClassWithNewCtor = oldClass.ReplaceNode(oldConstructor, newConstructor);
-
-            var fieldDeclaration = CreateFieldDeclaration(GetParameterType(parameter), paramName, useUnderscore);
-            var newClass = oldClassWithNewCtor
-                .WithMembers(oldClassWithNewCtor.Members.Insert(0, fieldDeclaration))
-                .WithAdditionalAnnotations(Formatter.Annotation);
-
-            var oldRoot = await context.Document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            var newRoot = oldRoot.ReplaceNode(oldClass, newClass);
-
-            return context.Document.WithSyntaxRoot(newRoot);
+        private ExpressionSyntax CreateAssignment(CodeRefactoringContext context, string paramName, bool useUnderscore)
+        {
+            ExpressionSyntax assignment =
+                SyntaxFactory.AssignmentExpression(
+                    SyntaxKind.SimpleAssignmentExpression,
+                    useUnderscore ? (ExpressionSyntax)SyntaxFactory.IdentifierName("_" + paramName) : SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.ThisExpression(), SyntaxFactory.IdentifierName(paramName)),
+                    SyntaxFactory.IdentifierName(paramName)
+                );
+            return assignment;
         }
 
         public static bool VariableExists(SyntaxNode root, params string[] variableNames)

@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Composition;
 using System.Linq;
@@ -78,8 +79,27 @@ namespace CreateConstructorRefactoring
             var statements = new List<StatementSyntax>();
             foreach (var field in candidateFields)
             {
-                parameterTokens.Add(SyntaxFactory.Parameter(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), field.Declaration.Type, field.Declaration.Variables[0].Identifier, null)); // todo: handle fielddeclarations with multiple variables
+                var paramName = field.Declaration.Variables[0].Identifier;
+                parameterTokens.Add(SyntaxFactory.Parameter(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), field.Declaration.Type, paramName, null)); // todo: handle fielddeclarations with multiple variables
                 parameterTokens.Add(SyntaxFactory.Token(SyntaxKind.CommaToken));
+                statements.Add(SyntaxFactory.IfStatement(
+                                        SyntaxFactory.BinaryExpression(
+                                            SyntaxKind.EqualsExpression,
+                                            SyntaxFactory.IdentifierName(paramName),
+                                            SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression)
+                                         ),
+                                        SyntaxFactory.ThrowStatement(
+                                            SyntaxFactory.ObjectCreationExpression(
+                                                SyntaxFactory.IdentifierName(nameof(ArgumentNullException)),
+                                                                             SyntaxFactory.ArgumentList().AddArguments(
+                                                                                 SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(SyntaxFactory.IdentifierName(paramName).Identifier.ToString())))
+                                                                             ),
+                                                                             null
+                                                                                  )
+                                                                      )
+                                                             )
+                  );
+
                 statements.Add(SyntaxFactory.ExpressionStatement(
                                         SyntaxFactory.AssignmentExpression(
                                                 SyntaxKind.SimpleAssignmentExpression,
