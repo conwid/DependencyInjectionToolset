@@ -15,16 +15,23 @@ namespace CreateConstructorRefactoring
     [ExportCodeRefactoringProvider(LanguageNames.CSharp, Name = nameof(CreateConstructorRefactoringCodeRefactoringProvider)), Shared]
     internal class CreateConstructorRefactoringCodeRefactoringProvider : CodeRefactoringProvider
     {
-        private bool CandidateField(FieldDeclarationSyntax fieldDecl)
+        protected string ActionName;
+
+        public CreateConstructorRefactoringCodeRefactoringProvider()
+        {
+            ActionName = "Create constructor for dependency injection";
+        }
+
+        protected bool CandidateField(FieldDeclarationSyntax fieldDecl)
         {
             return !(fieldDecl == null || fieldDecl.Modifiers.ToString().Contains(SyntaxFactory.Token(SyntaxKind.PublicKeyword).ToString())
                 || fieldDecl.Modifiers.ToString().Contains(SyntaxFactory.Token(SyntaxKind.StaticKeyword).ToString())
                 || !fieldDecl.Modifiers.ToString().Contains(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword).ToString()));
         }
 
-        private bool IsInjectableType(FieldDeclarationSyntax fieldDecl, SemanticModel model)
+        protected bool IsInjectableType(TypeSyntax typeSyntax, SemanticModel model)
         {
-            var symbolInfo = model.GetSymbolInfo(fieldDecl.Declaration.Type);
+            var symbolInfo = model.GetSymbolInfo(typeSyntax);
             if (symbolInfo.Symbol == null)
             {
                 return false;
@@ -52,53 +59,65 @@ namespace CreateConstructorRefactoring
             return baseCtors.OrderByDescending(c => c.Parameters.Length).First();
         }
 
-        public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
+        protected bool CandidateProperty(PropertyDeclarationSyntax propertyDecl)
+        {
+            return propertyDecl.AccessorList.Accessors.All(a => a.IsKind(SyntaxKind.GetAccessorDeclaration));
+        }
+
+        public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
             var node = root.FindNode(context.Span);
             var model = await context.Document.GetSemanticModelAsync();
             var fieldDecl = node as FieldDeclarationSyntax;
-            if (!CandidateField(fieldDecl) || !IsInjectableType(fieldDecl, model))
+            var propertyDecl = node as PropertyDeclarationSyntax;
+            if ((fieldDecl != null && CandidateField(fieldDecl) && IsInjectableType(fieldDecl.Declaration.Type, model)) || (propertyDecl != null && CandidateProperty(propertyDecl) && IsInjectableType(propertyDecl.Type, model)))
             {
-                return;
+                // For any type declaration node, create a code action to reverse the identifier text.
+                var action = CodeAction.Create(ActionName, c => CreateCtor(context, context.Document, model, fieldDecl ?? (MemberDeclarationSyntax)propertyDecl, c));
+
+                // Register this code action.
+                context.RegisterRefactoring(action);
             }
-
-            // For any type declaration node, create a code action to reverse the identifier text.
-            var action = CodeAction.Create("Create constructor for dependency injection", c => CreateCtor(context, context.Document, model, fieldDecl, c));
-
-            // Register this code action.
-            context.RegisterRefactoring(action);
         }
 
-        private async Task<Document> CreateCtor(CodeRefactoringContext context, Document document, SemanticModel model, FieldDeclarationSyntax fieldDecl, CancellationToken cancellationToken)
+        protected virtual List<SyntaxNodeOrToken> GetParameterTokensForCtor(ClassDeclarationSyntax originalType, SemanticModel model)
         {
-            var originalType = fieldDecl.Parent as ClassDeclarationSyntax;
-            var fields = originalType.DescendantNodes().OfType<FieldDeclarationSyntax>();
-            var candidateFields = fields.Where(f => CandidateField(f) && IsInjectableType(f, model));
             var parameterTokens = new List<SyntaxNodeOrToken>();
-            var statements = new List<StatementSyntax>();
-            foreach (var field in candidateFields)
+            var fields = originalType.DescendantNodes().OfType<FieldDeclarationSyntax>();
+            foreach (var field in fields.Where(f => CandidateField(f) && IsInjectableType(f.Declaration.Type, model)))
             {
                 var paramName = field.Declaration.Variables[0].Identifier;
                 parameterTokens.Add(SyntaxFactory.Parameter(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), field.Declaration.Type, paramName, null)); // todo: handle fielddeclarations with multiple variables
                 parameterTokens.Add(SyntaxFactory.Token(SyntaxKind.CommaToken));
+            }
+            return parameterTokens;
+        }
+
+        protected virtual List<StatementSyntax> GetStatementsForCtor(ClassDeclarationSyntax originalType, SemanticModel model)
+        {
+            var statements = new List<StatementSyntax>();
+            var fields = originalType.DescendantNodes().OfType<FieldDeclarationSyntax>();
+            foreach (var field in fields.Where(f => CandidateField(f) && IsInjectableType(f.Declaration.Type, model)))
+            {
+                var paramName = field.Declaration.Variables[0].Identifier;
                 statements.Add(SyntaxFactory.IfStatement(
-                                        SyntaxFactory.BinaryExpression(
-                                            SyntaxKind.EqualsExpression,
-                                            SyntaxFactory.IdentifierName(paramName),
-                                            SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression)
-                                         ),
-                                        SyntaxFactory.ThrowStatement(
-                                            SyntaxFactory.ObjectCreationExpression(
-                                                SyntaxFactory.IdentifierName(nameof(ArgumentNullException)),
-                                                                             SyntaxFactory.ArgumentList().AddArguments(
-                                                                                 SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(SyntaxFactory.IdentifierName(paramName).Identifier.ToString())))
-                                                                             ),
-                                                                             null
-                                                                                  )
-                                                                      )
-                                                             )
-                  );
+                        SyntaxFactory.BinaryExpression(
+                            SyntaxKind.EqualsExpression,
+                            SyntaxFactory.IdentifierName(paramName),
+                            SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression)
+                         ),
+                        SyntaxFactory.ThrowStatement(
+                            SyntaxFactory.ObjectCreationExpression(
+                                SyntaxFactory.IdentifierName(nameof(ArgumentNullException)),
+                                                             SyntaxFactory.ArgumentList().AddArguments(
+                                                                 SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(SyntaxFactory.IdentifierName(paramName).Identifier.ToString())))
+                                                             ),
+                                                             null
+                                                                  )
+                                                      )
+                                             )
+  );
 
                 statements.Add(SyntaxFactory.ExpressionStatement(
                                         SyntaxFactory.AssignmentExpression(
@@ -107,6 +126,15 @@ namespace CreateConstructorRefactoring
                                                 SyntaxFactory.IdentifierName(field.Declaration.Variables[0].Identifier)
                     )));
             }
+
+            return statements;
+        }
+
+        protected virtual async Task<Document> CreateCtor(CodeRefactoringContext context, Document document, SemanticModel model, MemberDeclarationSyntax fieldDecl, CancellationToken cancellationToken)
+        {
+            var originalType = fieldDecl.Parent as ClassDeclarationSyntax;
+            var parameterTokens = GetParameterTokensForCtor(originalType, model);
+            var statements = GetStatementsForCtor(originalType, model);
 
             var ctor = SyntaxFactory.ConstructorDeclaration(SyntaxFactory.Identifier(originalType.Identifier.ToString()))
                                   .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)));
