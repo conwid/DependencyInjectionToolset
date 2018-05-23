@@ -64,7 +64,7 @@ namespace CreateConstructorRefactoring
             return propertyDecl.AccessorList.Accessors.All(a => a.IsKind(SyntaxKind.GetAccessorDeclaration));
         }
 
-        public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
+        public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
             var node = root.FindNode(context.Span);
