@@ -91,6 +91,7 @@ namespace CreateConstructorRefactoring
                 parameterTokens.Add(SyntaxFactory.Parameter(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), field.Declaration.Type, paramName, null)); // todo: handle fielddeclarations with multiple variables
                 parameterTokens.Add(SyntaxFactory.Token(SyntaxKind.CommaToken));
             }
+
             return parameterTokens;
         }
 
@@ -148,7 +149,11 @@ namespace CreateConstructorRefactoring
                     parameterTokens.Add(SyntaxFactory.Token(SyntaxKind.CommaToken));
                 }
             }
-            parameterTokens.RemoveAt(parameterTokens.Count - 1);
+
+            if (parameterTokens.Count > 0)
+            {
+                parameterTokens.RemoveAt(parameterTokens.Count - 1);
+            }
 
             ctor = ctor.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList<ParameterSyntax>(parameterTokens)));
 
